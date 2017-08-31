@@ -194,6 +194,10 @@ int tcp_flag=0;
 char *tcp_server_address=0;
 int tcp_socket=-1;
 
+int raw_socket=-1;
+int raw_flag=0;
+char *raw_eth_name=NULL;
+
 int error_count;
 #define OVERHEAD 18
 #define OVER_ERR 20
@@ -300,6 +304,7 @@ static struct option const long_options[] =
   {"tcp-server", no_argument, NULL, 6},
   {"tcp-client", required_argument, NULL, 7},
   {"no-unixmode", no_argument, NULL, 8},
+  {"raw", required_argument, NULL, 9},
   {NULL, 0, NULL, 0}
 };
 
@@ -584,6 +589,12 @@ main(int argc, char **argv)
 			}
 			break;
 		case 8: no_unixmode=1; break;
+        case 9:
+            raw_flag = 1;
+    		raw_eth_name=(char *)strdup(optarg);
+    		if (!raw_eth_name)
+    			error(1,0,_("out of memory"));
+            break;
 		default:
 			usage (2,NULL);
 			break;
@@ -680,6 +691,14 @@ main(int argc, char **argv)
 		dup2(tcp_socket,1);
 	}
 
+    if (raw_flag == 1) 
+    {
+    	if (!raw_eth_name)
+    		error(1,0, _("illegal eth name\n"));
+        raw_socket = raw_bind(raw_eth_name);
+    	dup2(raw_socket,0);
+    	dup2(raw_socket,1);
+	}
 
 	{
 		/* we write max_blocklen (data) + 18 (ZModem protocol overhead)

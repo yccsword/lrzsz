@@ -114,7 +114,13 @@ int in_tcpsync=0;
 int tcpsync_flag=1;
 int tcp_socket=-1;
 int tcp_flag=0;
+
+int raw_socket=-1;
+int raw_flag=0;
+
 char *tcp_server_address=NULL;
+char *raw_eth_name=NULL;
+
 
 char tcp_buf[256]="";
 #if defined(F_GETFD) && defined(F_SETFD) && defined(O_SYNC)
@@ -244,6 +250,7 @@ static struct option const long_options[] =
 	{"o_sync", no_argument, NULL, 5},
 	{"tcp-server", no_argument, NULL, 6},
 	{"tcp-client", required_argument, NULL, 7},
+    {"raw", required_argument, NULL, 8},
 	{NULL,0,NULL,0}
 };
 
@@ -469,6 +476,12 @@ main(int argc, char *argv[])
 			if (!tcp_server_address)
 				error(1,0,_("out of memory"));
 			break;
+        case 8:
+            raw_flag = 1;
+			raw_eth_name=(char *)strdup(optarg);
+			if (!raw_eth_name)
+				error(1,0,_("out of memory"));
+            break;
 		default:
 			usage(2,NULL);
 		}
@@ -547,6 +560,15 @@ main(int argc, char *argv[])
 		tcp_socket=tcp_connect(buf);
 		dup2(tcp_socket,0);
 		dup2(tcp_socket,1);
+	}
+
+	if (raw_flag == 1) 
+    {
+    	if (!raw_eth_name)
+    		error(1,0, _("illegal eth name\n"));
+        raw_socket = raw_bind(raw_eth_name);
+    	dup2(raw_socket,0);
+    	dup2(raw_socket,1);
 	}
 
 	io_mode(0,1);

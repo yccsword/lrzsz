@@ -38,6 +38,11 @@
 #include <stdlib.h>
 #include "error.h"
 
+#include <linux/if_ether.h>
+#include <netpacket/packet.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+
 static RETSIGTYPE
 tcp_alarm_handler(int dummy LRZSZ_ATTRIB_UNUSED)
 {
@@ -167,3 +172,36 @@ tcp_connect (char *buf)
 	alarm(0);
 	return (sock);
 }
+
+inline int get_nic_index(int fd, const char* nic_name)
+{
+    struct ifreq ifr;
+    if (nic_name == NULL)
+           return -1; 
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, nic_name, IFNAMSIZ);
+    if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
+        perror("SIOCGIFINDEX ioctl error");
+        return -1; 
+    } 
+    return ifr.ifr_ifindex;
+}
+
+int 
+raw_bind (char *eth_name)
+{
+    int sock;
+    /* we need to switch to raw mode */
+    sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    struct sockaddr_ll sll;
+    memset(&sll, 0, sizeof(sll));
+    sll.sll_family = AF_PACKET;
+    sll.sll_ifindex = get_nic_index(sock, eth_name);
+    sll.sll_protocol = htons(ETH_P_ALL);
+    if(bind(sock, (struct sockaddr *) &sll, sizeof(sll)) == -1 ) 
+    {
+        perror("bind()");
+    }
+    return (sock);
+}
+
